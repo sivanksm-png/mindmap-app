@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mindmap-app:
+    build: .
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    container_name: mindmap-app
+    environment:
+      - NODE_ENV=production
+    networks:
+      - mindmap-network
+
+networks:
+  mindmap-network:
+    driver: bridge

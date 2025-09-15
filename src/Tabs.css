@@ -1,0 +1,36 @@
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  margin-right: 5px;
+  position: relative;
+}
+
+.tab.active {
+  background-color: #fff;
+  border-bottom: 1px solid #fff;
+  border-top: 2px solid red; /* Add a red top border */
+}
+
+.close-tab {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.add-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+}
