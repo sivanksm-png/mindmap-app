@@ -639,29 +639,52 @@ function App() {
       const sourceHeight = sourceNode.height || 40;
       let newPosition = {};
 
+      // 같은 방향에서 이미 연결된 노드들을 찾아서 겹치지 않는 위치 계산
+      const existingEdges = activeMindmap.edges.filter(edge => 
+        edge && edge.source === sourceNodeId && edge.sourceHandle === direction
+      );
+      
+      // 해당 방향에서 이미 생성된 노드들의 위치
+      const existingPositions = existingEdges.map(edge => {
+        if (!edge || !edge.target) return null;
+        const targetNode = currentNodes.find(n => n && n.id === edge.target);
+        return targetNode && targetNode.position ? targetNode.position : null;
+      }).filter(pos => pos !== null && pos.x !== undefined && pos.y !== undefined);
+
+      // 기본 간격 설정
+      const NODE_SPACING = 80; // 노드 간 최소 간격
+
       switch (direction) {
         case 'top':
+          // 위쪽 방향: x 좌표를 좌우로 조정 (위아래 방향은 좌우로 배치)
+          const topY = sourceNode.position.y - sourceHeight - VERTICAL_SPACING;
           newPosition = {
-            x: sourceNode.position.x,
-            y: sourceNode.position.y - sourceHeight - VERTICAL_SPACING,
+            x: calculateNonOverlappingPosition(existingPositions, 'x', sourceNode.position.x, NODE_SPACING, 'horizontal'),
+            y: topY
           };
           break;
         case 'right':
+          // 오른쪽 방향: y 좌표를 위아래로 조정 (좌우 방향은 위아래로 배치)
+          const rightX = sourceNode.position.x + sourceWidth + HORIZONTAL_SPACING;
           newPosition = {
-            x: sourceNode.position.x + sourceWidth + HORIZONTAL_SPACING,
-            y: sourceNode.position.y,
+            x: rightX,
+            y: calculateNonOverlappingPosition(existingPositions, 'y', sourceNode.position.y, NODE_SPACING, 'vertical')
           };
           break;
         case 'bottom':
+          // 아래쪽 방향: x 좌표를 좌우로 조정 (위아래 방향은 좌우로 배치)
+          const bottomY = sourceNode.position.y + sourceHeight + VERTICAL_SPACING;
           newPosition = {
-            x: sourceNode.position.x,
-            y: sourceNode.position.y + sourceHeight + VERTICAL_SPACING,
+            x: calculateNonOverlappingPosition(existingPositions, 'x', sourceNode.position.x, NODE_SPACING, 'horizontal'),
+            y: bottomY
           };
           break;
         case 'left':
+          // 왼쪽 방향: y 좌표를 위아래로 조정 (좌우 방향은 위아래로 배치)
+          const leftX = sourceNode.position.x - sourceWidth - HORIZONTAL_SPACING;
           newPosition = {
-            x: sourceNode.position.x - sourceWidth - HORIZONTAL_SPACING,
-            y: sourceNode.position.y,
+            x: leftX,
+            y: calculateNonOverlappingPosition(existingPositions, 'y', sourceNode.position.y, NODE_SPACING, 'vertical')
           };
           break;
         default:
@@ -1019,6 +1042,60 @@ function App() {
       canDrag: !connectionMode,
     }
   }));
+
+  // 겹치지 않는 위치를 계산하는 함수
+  const calculateNonOverlappingPosition = (existingPositions, axis, basePosition, spacing, direction) => {
+    try {
+      if (!existingPositions || existingPositions.length === 0) {
+        return basePosition;
+      }
+
+      // 해당 축의 좌표들을 정렬
+      const positions = existingPositions
+        .filter(pos => pos && typeof pos[axis] === 'number')
+        .map(pos => pos[axis])
+        .sort((a, b) => a - b);
+      
+      if (positions.length === 0) {
+        return basePosition;
+      }
+
+      // 기본 위치와 가장 가까운 위치 찾기
+      let bestPosition = basePosition;
+      let minDistance = Infinity;
+      
+      // 기존 위치들과의 충돌 검사
+      for (let i = 0; i < positions.length; i++) {
+        const existingPos = positions[i];
+        const distance = Math.abs(existingPos - basePosition);
+        
+        // 충돌하는 경우 (간격이 부족한 경우)
+        if (distance < spacing) {
+          // 새로운 배치 방식에 따라 위치 계산
+          if (direction === 'horizontal') {
+            // 좌우 배치: 기존 위치보다 오른쪽에 배치
+            const newPos = existingPos + spacing;
+            if (Math.abs(newPos - basePosition) < minDistance) {
+              bestPosition = newPos;
+              minDistance = Math.abs(newPos - basePosition);
+            }
+          } else if (direction === 'vertical') {
+            // 위아래 배치: 기존 위치보다 아래쪽에 배치
+            const newPos = existingPos + spacing;
+            if (Math.abs(newPos - basePosition) < minDistance) {
+              bestPosition = newPos;
+              minDistance = Math.abs(newPos - basePosition);
+            }
+          }
+        }
+      }
+      
+      return bestPosition;
+    } catch (error) {
+      console.error('calculateNonOverlappingPosition error:', error);
+      return basePosition;
+    }
+  };
 
   // 노드의 깊이(레벨)를 계산하는 함수
   const getNodeDepth = (nodeId, nodes, edges) => {
